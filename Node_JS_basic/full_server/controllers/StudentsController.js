@@ -1,31 +1,44 @@
-const readDatabase = require('../utils');
+import readDatabase from '../utils';
 
 class StudentsController {
   static getAllStudents(request, response) {
-    readDatabase('./database.csv')
-      .then((data) => {
-        const result = `${data.sentence0}\n${data.sentence2}\n${data.sentence3}`;
-        response.status(200).send(result);
+    readDatabase(process.argv[2] || './database.csv')
+      .then((studentsData) => {
+        const csList = studentsData.CS.join(', ');
+        const sweList = studentsData.SWE.join(', ');
+
+        const responseText = 'This is the list of our students\n'
+        + `Number of students in CS: ${studentsData.CS.length}. List: ${csList}\n`
+        + `Number of students in SWE: ${studentsData.SWE.length}. List: ${sweList}`;
+
+        response.status(200).send(responseText);
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error('Error processing students data:', error);
         response.status(500).send('Cannot load the database');
       });
   }
 
   static getAllStudentsByMajor(request, response) {
-    const { major } = request.params; // Récupérer le paramètre 'major' de la requête
-    if (!['CS', 'SWE'].includes(major)) {
-      response.status(500).send('Major parameter must be CS or SWE'); // Envoyer une réponse avec le statut 500 et le message d'erreur
+    const { major } = request.params;
+
+    if (major !== 'CS' && major !== 'SWE') {
+      response.status(500).send('Major parameter must be CS or SWE');
       return;
     }
-    readDatabase('./database.csv')
-      .then((data) => {
-        const studentsInMajor = major === 'CS' ? data.csArray : data.sweArray;
-        response.status(200).send(`List: ${studentsInMajor.join(', ')}`);
+
+    readDatabase(process.argv[2] || './database.csv')
+      .then((studentsData) => {
+        const majorStudents = studentsData[major] || [];
+        const responseText = `List: ${majorStudents.join(', ')}`;
+
+        response.status(200).send(responseText);
       })
-      .catch(() => {
-        response.status(500).send('Cannot load the database'); // Envoyer une réponse avec le statut 500 et le message d'erreur
+      .catch((error) => {
+        console.error('Error processing students data:', error);
+        response.status(500).send('Cannot load the database');
       });
   }
 }
-module.exports = StudentsController;
+
+export default StudentsController;
